@@ -9,11 +9,9 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
-import static com.application.atm.test.Test.displayAllCustomers;
 
 public class ATM_Service {
 
@@ -61,7 +59,32 @@ public class ATM_Service {
         return customers;
     }
 
-    public static List<Customer> openAccount(List<Customer> customers) throws Exception
+    public static Customer validateCustomer(List<Customer> customers, long id, String pin) throws Exception
+    {
+         Customer customer = null;
+
+        // Check if the customer exists or not.
+        for (Customer value : customers) {
+            customer = value;
+            //System.out.println(customer.toString());
+
+            if (customer.getId() == id)
+                break;
+
+            customer = null;
+        }
+
+        if (customer == null)
+            throw new CustomerNotFoundException(id);
+
+        // Check if the PIN matches or not.
+        if (!customer.getPin().equals(pin))
+            throw new pinMissMatchException();
+
+        return customer;
+    }
+
+    public static void openAccount(List<Customer> customers) throws Exception
     {
         // Enter name
         System.out.print("Enter your name: ");
@@ -71,9 +94,6 @@ public class ATM_Service {
         if(name.isEmpty())
             throw new FieldException("name", "empty");
 
-        if(name == null)
-            throw new FieldException("name", "null");
-
         // Enter PIN
         System.out.print("Enter new PIN: ");
         String pin = scanner.nextLine();
@@ -82,12 +102,9 @@ public class ATM_Service {
         if(pin.isEmpty())
             throw new FieldException("PIN", "empty");
 
-        if(pin == null)
-            throw new FieldException("PIN", "null");
-
         int pinSize = pin.length();
 
-        if(pinSize > 4 || pinSize < 4)
+        if(pinSize != 4)
             throw new FieldException("PIN length should be 4. :(");
 
         for(int i = 0; i < pinSize; i++)
@@ -101,81 +118,35 @@ public class ATM_Service {
         customers.add(new Customer(++latestCustomerId, name, pin, 0));
         System.out.println("Your account has been created successfully :)\nYour account id is " + latestCustomerId + ".");
 
-        return customers;
     }
 
-    public static List<Customer> closeAccount(List<Customer> customers, long id, String pin) throws Exception
+    public static void closeAccount(List<Customer> customers, long id, String pin) throws Exception
     {
-
-        // Check if the customer exists or not.
-        Customer customer = null;
-
-        Iterator<Customer> iterator = customers.iterator();
-        while (iterator.hasNext())
-        {
-            customer = iterator.next();
-            //System.out.println(customer.toString());
-
-            if(customer.getId() == id)
-                break;
-
-            customer = null;
-        }
-
-        if (customer == null)
-            throw new CustomerNotFoundException(id);
-
-        // Check if the PIN matches or not.
-        if (!customer.getPin().equals(pin))
-            throw new pinMissMatchException();
+        Customer customer = validateCustomer(customers, id, pin);
 
         // Check for zero balance
         if (customer.getBalance() > 0)
             throw new NonEmptyAccountException();
 
         // Delete customer from the list.
-        iterator = customers.iterator();
-        while (iterator.hasNext())
-        {
-            customer = iterator.next();
-            if(customer.getId() == id)
+        for (Customer value : customers) {
+            customer = value;
+            if (customer.getId() == id)
                 break;
         }
         customers.remove(customer);
         System.out.println("Your account has been closed successfully :)\nVisit us again!");
         // Return the list
-        return customers;
     }
 
-    public static List<Customer> depositCash(List<Customer> customers, long id, String pin) throws Exception
+    public static void depositCash(List<Customer> customers, long id, String pin) throws Exception
     {
-
-        // Check if the customer exists or not.
-        Customer customer = null;
-
-        Iterator<Customer> iterator = customers.iterator();
-        while (iterator.hasNext())
-        {
-            customer = iterator.next();
-            //System.out.println(customer.toString());
-
-            if(customer.getId() == id)
-                break;
-
-            customer = null;
-        }
-
-        if (customer == null)
-            throw new CustomerNotFoundException(id);
-
-        // Check if the PIN matches or not.
-        if (!customer.getPin().equals(pin))
-            throw new pinMissMatchException();
+        Customer customer = validateCustomer(customers, id, pin);
 
         // print current balance.
         System.out.println("Your current balance is Rs." + customer.getBalance() + "/-");
 
-        int cashCount = 0;
+        int cashCount;
         long depositAmount = 0;
 
         // Count and calculate cash amount to be deposited.
@@ -185,7 +156,7 @@ public class ATM_Service {
         if (cashCount<0)
             throw new InvalidDepositAmountException();
         else
-            depositAmount += (2000 * cashCount);
+            depositAmount += (2000L * cashCount);
 
         // Cash counting for 500 rupees.
         System.out.print("Enter the number of 500 rupees: ");
@@ -193,7 +164,7 @@ public class ATM_Service {
         if (cashCount<0)
             throw new InvalidDepositAmountException();
         else
-            depositAmount += (500 * cashCount);
+            depositAmount += (500L * cashCount);
 
         // Cash counting for 200 rupees.
         System.out.print("Enter the number of 200 rupees: ");
@@ -201,7 +172,7 @@ public class ATM_Service {
         if (cashCount<0)
             throw new InvalidDepositAmountException();
         else
-            depositAmount += (200 * cashCount);
+            depositAmount += (200L * cashCount);
 
         // Cash counting for 100 rupees.
         System.out.print("Enter the number of 100 rupees: ");
@@ -210,7 +181,7 @@ public class ATM_Service {
         if (cashCount<0)
             throw new InvalidDepositAmountException();
         else
-            depositAmount += (100 * cashCount);
+            depositAmount += (100L * cashCount);
 
         if (depositAmount == 0)
             throw new InvalidDepositAmountException("Deposit amount cannot be zero! :(");
@@ -222,37 +193,16 @@ public class ATM_Service {
         // print updated balance.
         System.out.println("Now your current balance is Rs." + customer.getBalance() + "/-");
 
-        return customers;
     }
 
-    public static List<Customer> withdrawCash(List<Customer> customers, long id, String pin) throws Exception
+    public static void withdrawCash(List<Customer> customers, long id, String pin) throws Exception
     {
-        // Check if the customer exists or not.
-        Customer customer = null;
-
-        Iterator<Customer> iterator = customers.iterator();
-        while (iterator.hasNext())
-        {
-            customer = iterator.next();
-            //System.out.println(customer.toString());
-
-            if(customer.getId() == id)
-                break;
-
-            customer = null;
-        }
-
-        if (customer == null)
-            throw new CustomerNotFoundException(id);
-
-        // Check if the PIN matches or not.
-        if (!customer.getPin().equals(pin))
-            throw new pinMissMatchException();
+        Customer customer =  validateCustomer(customers, id, pin);
 
         // Current balance print
         System.out.println("Your current balance is Rs." + customer.getBalance() + "/-");
 
-        long withdrawAmount = 0;
+        long withdrawAmount;
         int cashCount = 0;
 
         // Input the with-draw amount
@@ -274,40 +224,35 @@ public class ATM_Service {
 
         // Denomination calculations
         String line = "Cash dispensed: ";
-        while(withdrawAmount >= 2000){
+        if (withdrawAmount >= 2000){
             cashCount = (int) withdrawAmount/2000;
             withdrawAmount %= 2000;
-            break;
         }
 
-        line += "2000s="+cashCount+" ";
+        line += "2000s=" + cashCount+" ";
         cashCount = 0;
 
-        while(withdrawAmount >= 500){
+        if (withdrawAmount >= 500){
             cashCount = (int) withdrawAmount/500;
             withdrawAmount %= 500;
-            break;
         }
 
-        line += "500s="+cashCount+" ";
+        line += "500s=" + cashCount+" ";
         cashCount = 0;
 
-        while(withdrawAmount >= 200){
+        if (withdrawAmount >= 200){
             cashCount = (int) withdrawAmount/200;
             withdrawAmount %= 200;
-            break;
         }
 
-        line += "200s="+cashCount+" ";
+        line += "200s=" + cashCount+" ";
         cashCount = 0;
 
-        while(withdrawAmount >= 100){
+        if (withdrawAmount >= 100){
             cashCount = (int) withdrawAmount/100;
-            withdrawAmount %= 100;
-            break;
         }
 
-        line += "100s="+cashCount;
+        line += "100s=" + cashCount;
 
 
         // Denominations print
@@ -315,7 +260,6 @@ public class ATM_Service {
         // Updated Balance print
         System.out.println("Now your current balance is Rs." + customer.getBalance() + "/-");
 
-        return customers;
     }
 
 
@@ -349,58 +293,39 @@ public class ATM_Service {
                   str += "\nEnter your choice: ";
                   System.out.print(str);
                   char choice = scanner.nextLine().charAt(0);
-                  long customerID = 0;
-                  String pin = null;
+                  long customerID;
+                  String pin;
 
                   switch (choice) {
-                      case 'A':
-
-                      case 'a':// Open account
-                          customers = openAccount(customers);
-                          break;
-
-                      case 'B':
-
-                      case 'b':// Close account
+                      case 'A', 'a' ->// Open account
+                              openAccount(customers);
+                      case 'B', 'b' -> {// Close account
                           // Enter Account Number (your customer ID)
                           System.out.print("Enter account number (your customer ID): ");
                           customerID = Long.parseLong(scanner.nextLine());
                           System.out.print("Enter your PIN: ");
                           pin = scanner.nextLine();
-                          customers = closeAccount(customers, customerID, pin);
-                          break;
-
-                      case 'C':
-
-                      case 'c':// Deposit cash
+                          closeAccount(customers, customerID, pin);
+                      }
+                      case 'C', 'c' -> {// Deposit cash
                           // Enter customer id
                           System.out.print("Enter account number (your customer ID): ");
                           customerID = Long.parseLong(scanner.nextLine());
                           System.out.print("Enter your PIN: ");
                           pin = scanner.nextLine();
-                          customers = depositCash(customers, customerID, pin);
-                          break;
-
-                      case 'D':
-
-                      case 'd': // Withdraw cash
+                          depositCash(customers, customerID, pin);
+                      }
+                      case 'D', 'd' -> { // Withdraw cash
                           // Enter customer id
                           System.out.print("Enter account number (your customer ID): ");
                           customerID = Long.parseLong(scanner.nextLine());
                           System.out.print("Enter your PIN: ");
                           pin = scanner.nextLine();
-                          customers = withdrawCash(customers, customerID, pin);
-                          break;
-
-                      case 'E':
-
-                      case 'e': // Exit
-                          flag = true;
-                          break;
-
-                      default:
-                          throw new Exception("Invalid choice! :(");
-
+                          withdrawCash(customers, customerID, pin);
+                      }
+                      case 'E', 'e' -> // Exit
+                              flag = true;
+                      default -> throw new Exception("Invalid choice! :(");
                   }
 
               }
@@ -415,19 +340,16 @@ public class ATM_Service {
        Test.displayAllCustomers(customers);
 
        statement.executeUpdate("truncate table customer");
-       Iterator<Customer> iterator = customers.iterator();
-       while (iterator.hasNext())
-       {
-            Customer customer = iterator.next();
+        for (Customer customer : customers) {
             String query = "insert into customer values (";
             query += customer.getId() + ", ";
             query += "'" + customer.getName() + "', ";
             query += "'" + customer.getPin() + "', ";
             query += customer.getBalance() + ")";
-           // System.out.println(query);
+            // System.out.println(query);
 
-           statement.executeUpdate(query);
-       }
+            statement.executeUpdate(query);
+        }
     }
 
 }
